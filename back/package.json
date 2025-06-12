@@ -1,0 +1,19 @@
+{
+  "name": "back",
+  "version": "1.0.0",
+  "description": "test backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --experimental-modules server.js",
+    "watch": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ziyi WANG",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.2",
+    "jsonwebtoken": "^9.0.0",
+    "mysql": "^2.18.1",
+    "uuid": "^9.0.0"
+  }
+}
