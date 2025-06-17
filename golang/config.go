@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"bytes"
 
 	"github.com/deepch/vdk/av"
 )
@@ -134,56 +135,66 @@ func loadConfig() *ConfigST {
 	tmp.Server.HTTPPort = ":8083"
 	tmp.Streams = make(map[string]StreamST)
 
-	req, err := http.NewRequest("GET", "http://localhost:3000/videos", nil)
+	// 从后端动态获取 cameraCodes 列表
+	resp, err := http.Get("http://localhost:3000/cameras") // 替换成 https://10.70.37.12:18531/device/deviceList/v1.0?deviceType=2&fromIndex=1&toIndex=2000
 	if err != nil {
-		log.Fatalln("构建请求失败:", err)
-	}
-	req.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7fSwiaWF0IjoxNzQ5NzAyOTE0LCJleHAiOjE3NDk3MDM1MTR9.X5S973bFmu_bwszuOnGFXLOI2rXCrloJX2-uzmf7fiw") // 请替换你的 token
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Fatalln("请求 API 失败:", err)
+		log.Printf("获取 cameraCode 列表失败: %v", err)
+		return &tmp
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Println("Response body:\n", string(body))
-
-	if err != nil {
-		log.Fatalln("读取响应体失败:", err)
+	var cameraCodes []string
+	if err := json.NewDecoder(resp.Body).Decode(&cameraCodes); err != nil {
+		log.Printf("解析 cameraCode 列表失败: %v", err)
+		return &tmp
 	}
 
-	var cameraList []struct {
-		SUUID       string `json:"suuid"`
-		CameraCode  string `json:"cameraCode"`
-		Msg         string `json:"msg"`
-		Code        int    `json:"code"`
-	}
+	client := &http.Client{Timeout: 10 * time.Second}
 
-	err = json.Unmarshal(body, &cameraList)
-	if err != nil {
-		log.Fatalln("解析 JSON 失败:", err)
-	}
+	for _, code := range cameraCodes {
+		reqBody := map[string]string{"cameraCode": code}
+		jsonBody, _ := json.Marshal(reqBody)
 
-	for _, item := range cameraList {
-		if item.Code != 200 || item.Msg == "" {
-			log.Printf("跳过无效摄像头: %+v\n", item)
+		req, err := http.NewRequest("POST", "http://localhost:3000/video", bytes.NewBuffer(jsonBody)) // https://10.70.37.12:18531/video/rtspurl/v1.0
+		if err != nil {
+			log.Printf("构建请求失败（%s）: %v", code, err)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("请求失败（%s）: %v", code, err)
+			continue
+		}
+		body, err := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			log.Printf("读取响应失败（%s）: %v", code, err)
 			continue
 		}
 
-		tmp.Streams[item.SUUID] = StreamST{
-			URL:              item.Msg,
-			OnDemand:         false,
+		var result struct {
+			RTSPURL string `json:"rtspURL"`
+		}
+		if err := json.Unmarshal(body, &result); err != nil || result.RTSPURL == "" {
+			log.Printf("解析 JSON 或无效返回（%s）: %v", code, err)
+			continue
+		}
+
+		tmp.Streams[code] = StreamST{
+			URL:              result.RTSPURL,
+			OnDemand:         true, // false 表示“非按需”，服务器启动后立即开始拉流 //true 表示“按需”，只有在有用户访问播放地址时才启动拉流
 			Cl:               make(map[string]viewer),
 			hlsSegmentBuffer: make(map[int]Segment),
 		}
+
+        log.Printf("尝试请求 cameraCode=%s 的 RTSP 地址", code)
+		log.Printf("已添加摄像头: %s -> %s", code, result.RTSPURL)
 	}
 
 	return &tmp
 }
-
-
 
 func (element *ConfigST) cast(uuid string, pck av.Packet) {
 	element.mutex.Lock()

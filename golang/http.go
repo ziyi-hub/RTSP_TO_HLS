@@ -48,8 +48,16 @@ func serveHTTP() {
 			"version":  time.Now().String(),
 		})
 	})
+
 	router.GET("/play/hls/:suuid/index.m3u8", PlayHLS)
 	router.GET("/play/hls/:suuid/segment/:seq/file.ts", PlayHLSTS)
+	//添加调试接口列出所有 suuid
+	router.GET("/debug/streams", func(c *gin.Context) {
+        _, all := Config.list()
+        c.JSON(200, gin.H{
+            "streams": all,
+        })
+    })
 	router.StaticFS("/static", http.Dir("web/static"))
 	err := router.Run(Config.Server.HTTPPort)
 	if err != nil {
@@ -59,9 +67,12 @@ func serveHTTP() {
 
 func PlayHLS(c *gin.Context) {
 	suuid := c.Param("suuid")
+	log.Println("收到播放请求 suuid =", suuid)
 	if !Config.ext(suuid) {
-		return
-	}
+	    log.Println("流不存在：", suuid)
+    	c.Status(http.StatusNotFound)
+    	return
+    }
 	Config.RunIFNotRun(suuid)
 	for i := 0; i < 40; i++ {
 		index, seq, err := Config.StreamHLSm3u8(suuid)

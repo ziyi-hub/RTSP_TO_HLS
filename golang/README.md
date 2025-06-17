@@ -4,6 +4,9 @@ RTSP Stream to WebBrowser HLS over HTTP based TS segments
 
 full native! not use ffmpeg or gstreamer
 
+## Test index.m3u8
+- http://localhost:8083/play/hls/41010400001310001290#16#4c6a6bade5c74d66b71971f6f2670e61/index.m3u8
+- http://localhost:8083/player/41010400001310001290#16#4c6a6bade5c74d66b71971f6f2670e61
 
 ![RTSPtoHLS image](doc/demo4.png)
 
