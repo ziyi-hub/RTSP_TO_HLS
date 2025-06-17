@@ -60,6 +60,17 @@ type StreamST struct {
 	Cl               map[string]viewer
 }
 
+type cameraResponse struct {
+	ResultCode        int `json:"resultCode"`
+	CameraBriefInfos  struct {
+		CameraBriefInfoList struct {
+			CameraBriefInfo []struct {
+				Code string `json:"code"`
+			} `json:"cameraBriefInfo"`
+		} `json:"cameraBriefInfoList"`
+	} `json:"cameraBriefInfos"`
+}
+
 //Segment HLS cache section
 type Segment struct {
 	dur  time.Duration
@@ -102,60 +113,52 @@ func (element *ConfigST) HasViewer(uuid string) bool {
 	return false
 }
 
-// //声明一个名为 loadConfig 的函数，返回值是 *ConfigST 类型的指针（即返回一个配置对象的地址）
-// func loadConfig() *ConfigST {
-// 	//创建一个 ConfigST 类型的变量 tmp，用来暂存加载出来的配置内容。
-// 	var tmp ConfigST
-// 	//读取当前目录下的 config.json 文件内容，结果保存在 data 中，若失败会返回 err。
-// 	data, err := ioutil.ReadFile("config.json")
-// 	//如果读取文件时出错，就打印错误并终止程序（log.Fatalln 会输出日志并调用 os.Exit(1) 退出程序）。
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
-// 	//将读取到的 JSON 数据解析（反序列化）到 tmp 对象中（data → tmp），相当于把 JSON 数据转为结构体。
-// 	err = json.Unmarshal(data, &tmp)
-// 	//如果解析出错，也会打印错误并退出程序。
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
-// 	//遍历解析得到的所有视频流:
-// 	for i, v := range tmp.Streams {
-// 		//为每个流的 Cl（客户端列表）创建一个新的空 map。
-// 		v.Cl = make(map[string]viewer)
-// 		//为每个流的 hlsSegmentBuffer（HLS 缓存段）也创建一个新的空 map。
-// 		v.hlsSegmentBuffer = make(map[int]Segment)
-// 		//然后把修改后的流结构体重新赋值回 tmp.Streams[i]
-// 		tmp.Streams[i] = v
-// 	}
-// 	return &tmp
-// }
-
 func loadConfig() *ConfigST {
 	var tmp ConfigST
 	tmp.Server.HTTPPort = ":8083"
 	tmp.Streams = make(map[string]StreamST)
 
-	// 从后端动态获取 cameraCodes 列表
-	resp, err := http.Get("http://localhost:3000/cameras") // 替换成 https://10.70.37.12:18531/device/deviceList/v1.0?deviceType=2&fromIndex=1&toIndex=2000
+	// 正确设置请求
+	req, err := http.NewRequest("GET", "https://10.70.37.12:18531/device/deviceList/v1.0?deviceType=2&fromIndex=1&toIndex=2000", nil)
+	if err != nil {
+		log.Printf("构建请求失败: %v", err)
+		return &tmp
+	}
+	req.Header.Set("Cookie", "E908BC0DDCAF30D259FCAECF45CC580367DB2CB05CA86B65EAB14C23D1BF7BB3") // 替换为你自己的 Cookie 内容
+
+	// 支持自签名证书
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Printf("获取 cameraCode 列表失败: %v", err)
 		return &tmp
 	}
 	defer resp.Body.Close()
 
-	var cameraCodes []string
-	if err := json.NewDecoder(resp.Body).Decode(&cameraCodes); err != nil {
-		log.Printf("解析 cameraCode 列表失败: %v", err)
+	// 继续后续 JSON 解码逻辑
+	var camResp cameraResponse
+	if err := json.NewDecoder(resp.Body).Decode(&camResp); err != nil {
+		log.Printf("解析 cameraCode JSON 失败: %v", err)
 		return &tmp
 	}
+
+    	var cameraCodes []string
+    	for _, cam := range camResp.CameraBriefInfos.CameraBriefInfoList.CameraBriefInfo {
+    		cameraCodes = append(cameraCodes, cam.Code)
+    	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
 
 	for _, code := range cameraCodes {
+	    log.Printf("cameraCode 的数值为: %v", code)
 		reqBody := map[string]string{"cameraCode": code}
 		jsonBody, _ := json.Marshal(reqBody)
 
-		req, err := http.NewRequest("POST", "http://localhost:3000/video", bytes.NewBuffer(jsonBody)) // https://10.70.37.12:18531/video/rtspurl/v1.0
+		req, err := http.NewRequest("POST", "https://10.70.37.12:18531/video/rtspurl/v1.0", bytes.NewBuffer(jsonBody)) // https://10.70.37.12:18531/video/rtspurl/v1.0
 		if err != nil {
 			log.Printf("构建请求失败（%s）: %v", code, err)
 			continue

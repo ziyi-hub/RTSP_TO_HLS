@@ -22,10 +22,7 @@
     <list default="true" id="70dd9ea7-eba6-4d85-8189-6d8fb7a88631" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/back/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/back/server.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/front/src/App.vue" beforeDir="false" afterPath="$PROJECT_DIR$/front/src/App.vue" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/golang/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/golang/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/golang/config.go" beforeDir="false" afterPath="$PROJECT_DIR$/golang/config.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/golang/http.go" beforeDir="false" afterPath="$PROJECT_DIR$/golang/http.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,8 +60,16 @@
       <option name="presentableId" value="Default" />
       <updated>1749704069171</updated>
       <workItem from="1749704070101" duration="1636000" />
-      <workItem from="1750038993792" duration="9424000" />
+      <workItem from="1750038993792" duration="11511000" />
     </task>
+    <task id="LOCAL-00001" summary="hotfix: change structure of backend">
+      <created>1750123032850</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1750123032850</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -80,5 +85,15 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="hotfix: change structure of backend" />
+    <option name="LAST_COMMIT_MESSAGE" value="hotfix: change structure of backend" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="108" y="312" width="1240" height="578" key="DiffContextDialog" timestamp="1750125199607">
+      <screen x="0" y="0" width="1440" height="900" />
+    </state>
+    <state x="108" y="312" width="1240" height="578" key="DiffContextDialog/0.0.1440.900@0.0.1440.900" timestamp="1750125199607" />
   </component>
 </project>
